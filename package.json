@@ -1,0 +1,52 @@
+{
+  "name": "repo-agent-kit",
+  "version": "0.1.0",
+  "description": "Make any repository ready, safe, and measurable for AI coding agents.",
+  "type": "module",
+  "bin": {
+    "repo-agent-kit": "./dist/cli.js",
+    "rak": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/cli.ts",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "check": "npm run typecheck && npm run test && npm run build",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run check"
+  },
+  "keywords": [
+    "agents",
+    "ai-coding",
+    "mcp",
+    "codex",
+    "cursor",
+    "claude-code",
+    "agents-md",
+    "repo-analysis"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^14.0.0",
+    "fast-glob": "^3.3.3",
+    "picocolors": "^1.1.1",
+    "yaml": "^2.8.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.10",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
