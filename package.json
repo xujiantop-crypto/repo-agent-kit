@@ -31,8 +31,19 @@
     "agents-md",
     "repo-analysis"
   ],
-  "author": "",
+  "author": "xujiantop-crypto <265865031+xujiantop-crypto@users.noreply.github.com>",
   "license": "MIT",
+  "homepage": "https://github.com/xujiantop-crypto/repo-agent-kit#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xujiantop-crypto/repo-agent-kit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/xujiantop-crypto/repo-agent-kit/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "commander": "^14.0.0",
     "fast-glob": "^3.3.3",
