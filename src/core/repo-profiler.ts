@@ -68,7 +68,7 @@ const DISCOVERY_PATTERNS = [
   "src/lib.rs",
   "src/main/java/**/*Application.java",
   "src/main/resources/application*.{yml,yaml,properties}",
-  "{apps,packages,services,modules,frontend,backend,web,client,server,crates,cmd,internal}/*/{package.json,pom.xml,build.gradle,build.gradle.kts,pyproject.toml,requirements*.txt,go.mod,Cargo.toml,index.html}",
+  "{apps,packages,services,modules,frontend,backend,web,client,server,crates,cmd,internal}/*/{package.json,pnpm-lock.yaml,yarn.lock,bun.lockb,bun.lock,package-lock.json,pom.xml,build.gradle,build.gradle.kts,pyproject.toml,requirements*.txt,go.mod,Cargo.toml,index.html}",
   "{apps,packages,services,modules,frontend,backend,web,client,server,crates,cmd,internal}/*/src/{main,index,app}.{ts,tsx,js,jsx,vue,svelte,py,go,rs,java}"
 ];
 
@@ -157,6 +157,7 @@ async function collectDiscoveryFiles(root: string): Promise<string[]> {
     dot: true,
     onlyFiles: true,
     unique: true,
+    caseSensitiveMatch: false,
     ignore: IGNORE,
     followSymbolicLinks: false
   });
@@ -170,6 +171,7 @@ async function collectFileSample(root: string, patterns: string[], maxFiles: num
     dot: true,
     onlyFiles: true,
     unique: true,
+    caseSensitiveMatch: false,
     ignore: IGNORE,
     followSymbolicLinks: false
   }) as NodeJS.ReadableStream & AsyncIterable<string | Buffer> & { destroy: () => void };
@@ -316,7 +318,7 @@ async function detectCommands(
   files: string[]
 ): Promise<DetectedCommand[]> {
   const commands: DetectedCommand[] = [];
-  commands.push(...detectPackageCommands(packageManager, packageJsons));
+  commands.push(...detectPackageCommands(packageManager, packageJsons, files));
 
   for (const pom of files.filter((file) => file.endsWith("pom.xml")).sort(byDepthThenName).slice(0, 3)) {
     const suffix = pom === "pom.xml" ? "" : ` -f ${pom}`;
@@ -352,12 +354,17 @@ async function detectCommands(
   return dedupeCommands(commands).slice(0, 20);
 }
 
-function detectPackageCommands(packageManager: string | undefined, packageJsons: Map<string, PackageJson>): DetectedCommand[] {
+function detectPackageCommands(
+  rootPackageManager: string | undefined,
+  packageJsons: Map<string, PackageJson>,
+  files: string[]
+): DetectedCommand[] {
   const commands: DetectedCommand[] = [];
   const manifests = [...packageJsons.entries()].sort(([left], [right]) => byDepthThenName(left, right));
   for (const [manifest, packageJson] of manifests) {
     const scripts = packageJson.scripts ?? {};
     const dir = path.posix.dirname(manifest);
+    const packageManager = detectPackageManagerForManifest(manifest, rootPackageManager, files);
     const run = packageManager ? packageManagerRun(packageManager) : "npm run";
     for (const name of ["test", "lint", "typecheck", "build", "dev", "start"]) {
       if (!scripts[name]) {
@@ -371,6 +378,28 @@ function detectPackageCommands(packageManager: string | undefined, packageJsons:
     }
   }
   return commands;
+}
+
+function detectPackageManagerForManifest(
+  manifest: string,
+  rootPackageManager: string | undefined,
+  files: string[]
+): string | undefined {
+  const dir = path.posix.dirname(manifest);
+  const sibling = (file: string) => (dir === "." ? file : `${dir}/${file}`);
+  const checks: Array<[string, string]> = [
+    ["pnpm-lock.yaml", "pnpm"],
+    ["yarn.lock", "yarn"],
+    ["bun.lockb", "bun"],
+    ["bun.lock", "bun"],
+    ["package-lock.json", "npm"]
+  ];
+  for (const [file, manager] of checks) {
+    if (files.includes(sibling(file))) {
+      return manager;
+    }
+  }
+  return rootPackageManager ?? "npm";
 }
 
 function packageCommandInDir(packageManager: string | undefined, dir: string, scriptName: string): string {
@@ -416,7 +445,7 @@ async function detectEntrypoints(root: string, files: string[]): Promise<string[
     .filter((file) => {
       const base = path.basename(file);
       const segments = file.split("/");
-      if (base === "index.html") return true;
+      if (isLikelyHtmlEntrypoint(file)) return true;
       if (segments.length === 1 && /\.(py|go)$/.test(base)) return true;
       if (/^(main|app|manage)\.py$/.test(base)) return true;
       if (file === "src/main.ts" || file === "src/main.tsx" || file === "src/main.js" || file === "src/main.jsx") return true;
@@ -473,7 +502,7 @@ function detectImportantFiles(files: string[]): string[] {
     "main.js"
   ]);
   return files
-    .filter((file) => exact.has(file) || file.startsWith(".github/workflows/") || isRootStaticAsset(file) || /^nginx.*\.conf$/.test(path.basename(file)) || path.basename(file).endsWith(".cron"))
+    .filter((file) => exact.has(file) || isImportantManifestFile(file) || file.startsWith(".github/workflows/") || isRootStaticAsset(file) || /^nginx.*\.conf$/.test(path.basename(file)) || path.basename(file).endsWith(".cron"))
     .sort(byImportantFilePriority)
     .slice(0, 40);
 }
@@ -491,15 +520,23 @@ function buildScanNotes(sampledFiles: number, files: string[]): string[] {
     notes.push(`Language counts are capped at ${MAX_LANGUAGE_SAMPLE} files to keep large repositories responsive.`);
   }
   if (isStaticHtmlSite(files)) {
-    notes.push("Detected a static HTML site from index.html and browser assets without requiring package.json.");
+    notes.push("Detected a static HTML site from index.html without requiring package.json.");
   }
   return notes;
 }
 
 function isStaticHtmlSite(files: string[]): boolean {
-  const hasHtmlEntry = files.includes("index.html") || files.some((file) => file.endsWith("/index.html"));
+  const hasHtmlEntry = files.some(isLikelyHtmlEntrypoint);
   const hasPackageJson = files.some(isPackageJson);
   return hasHtmlEntry && !hasPackageJson;
+}
+
+function isLikelyHtmlEntrypoint(file: string): boolean {
+  if (file === "index.html") {
+    return true;
+  }
+  return /^(public|static|web|frontend|client|pages)(\/[^/]+)?\/index\.html$/i.test(file)
+    || /^(apps|packages|services|modules)\/[^/]+\/index\.html$/i.test(file);
 }
 
 function isPackageJson(file: string): boolean {
@@ -512,6 +549,10 @@ function isRootStaticAsset(file: string): boolean {
   }
   const extension = path.extname(file).toLowerCase();
   return [".html", ".css", ".js", ".mjs", ".py"].includes(extension);
+}
+
+function isImportantManifestFile(file: string): boolean {
+  return isPackageJson(file) || ["pom.xml", "build.gradle", "build.gradle.kts", "pyproject.toml", "go.mod", "Cargo.toml"].some((name) => file.endsWith(name)) || path.basename(file).startsWith("requirements");
 }
 
 function byDepthThenName(left: string, right: string): number {
@@ -560,7 +601,13 @@ function importantRank(file: string): number {
     ["Dockerfile", 7],
     ["docker-compose.yml", 7]
   ]);
-  return ranks.get(file) ?? (file.startsWith(".github/workflows/") ? 8 : 9);
+  if (ranks.has(file)) {
+    return ranks.get(file) ?? 9;
+  }
+  if (isImportantManifestFile(file)) {
+    return 4;
+  }
+  return file.startsWith(".github/workflows/") ? 8 : 9;
 }
 
 function dedupeCommands(commands: DetectedCommand[]): DetectedCommand[] {

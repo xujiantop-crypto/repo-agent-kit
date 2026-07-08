@@ -77,6 +77,68 @@ describe("repo profiler", () => {
     expect(profile.scanStrategy?.mode).toBe("tiered-fingerprint");
     expect(profile.scanStrategy?.notes.join("\n")).toContain("static HTML site");
   });
+
+  it("does not treat docs index pages as static site roots", async () => {
+    await write("pyproject.toml", "[project]\nname = \"docs-demo\"\n");
+    await write("docs/index.html", "<!doctype html><title>Docs</title>\n");
+    await write("src/demo.py", "print('hello')\n");
+
+    const profile = await profileRepository(tempDir);
+
+    expect(profile.frameworks).not.toContain("Static HTML site");
+    expect(profile.entrypoints).not.toContain("docs/index.html");
+  });
+
+  it("uses nested package managers and keeps nested manifests important", async () => {
+    await write(
+      "apps/web/package.json",
+      JSON.stringify({
+        scripts: {
+          build: "vite build"
+        },
+        dependencies: {
+          vite: "latest"
+        }
+      })
+    );
+    await write("apps/web/pnpm-lock.yaml", "");
+    await write("apps/web/index.html", "<!doctype html>\n");
+    await write("apps/web/src/main.ts", "console.log('web');\n");
+
+    const profile = await profileRepository(tempDir);
+
+    expect(profile.frameworks).toContain("Vite");
+    expect(profile.commands).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "build",
+          command: "pnpm --dir apps/web build",
+          source: "apps/web/package.json"
+        })
+      ])
+    );
+    expect(profile.importantFiles).toContain("apps/web/package.json");
+  });
+
+  it("preserves actual entrypoint casing for frontend app files", async () => {
+    await write(
+      "package.json",
+      JSON.stringify({
+        dependencies: {
+          vue: "latest",
+          vite: "latest"
+        }
+      })
+    );
+    await write("index.html", "<!doctype html>\n");
+    await write("src/App.vue", "<template>Hello</template>\n");
+    await write("src/main.ts", "import './App.vue';\n");
+
+    const profile = await profileRepository(tempDir);
+
+    expect(profile.entrypoints).toContain("src/App.vue");
+    expect(profile.entrypoints).not.toContain("src/app.vue");
+  });
 });
 
 describe("mcp inspector", () => {

@@ -21,7 +21,7 @@ function generateAgentsMd(profile: RepoProfile, findings: Finding[]): string {
     ? profile.commands.map((command) => `- ${command.name}: \`${command.command}\` (${command.source})`).join("\n")
     : "- No test/build commands were detected. Ask before inventing commands.";
   const sourceDirs = profile.sourceDirs.length ? profile.sourceDirs.map((dir) => `\`${dir}/\``).join(", ") : "not detected";
-  const entrypoints = profile.entrypoints?.length ? profile.entrypoints.map((file) => `\`${file}\``).join(", ") : "not detected";
+  const entrypoints = formatInlineFiles(profile.entrypoints ?? []);
   const risky = findings
     .filter((finding) => finding.severity === "critical" || finding.severity === "high")
     .slice(0, 6)
@@ -205,6 +205,15 @@ function formatObject(value: Record<string, number>): string {
 function formatBulletObject(value: Record<string, number>): string {
   const entries = Object.entries(value);
   return entries.length ? entries.map(([key, count]) => `- ${key}: ${count} files`).join("\n") : "- None detected";
+}
+
+function formatInlineFiles(files: string[], maxFiles = 8): string {
+  if (!files.length) {
+    return "not detected";
+  }
+  const visible = files.slice(0, maxFiles).map((file) => `\`${file}\``).join(", ");
+  const remaining = files.length - maxFiles;
+  return remaining > 0 ? `${visible}, and ${remaining} more` : visible;
 }
 
 function readingOrder(profile: RepoProfile): string[] {
