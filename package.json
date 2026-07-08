@@ -4,8 +4,8 @@
   "description": "Make any repository ready, safe, and measurable for AI coding agents.",
   "type": "module",
   "bin": {
-    "repo-agent-kit": "./dist/cli.js",
-    "rak": "./dist/cli.js"
+    "repo-agent-kit": "dist/cli.js",
+    "rak": "dist/cli.js"
   },
   "files": [
     "dist",
