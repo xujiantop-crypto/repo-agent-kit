@@ -19,7 +19,9 @@ export function renderConsoleReport(result: ScanResult): string {
   lines.push(pc.bold("Detected"));
   lines.push(`  Languages:  ${formatObject(result.profile.languages)}`);
   lines.push(`  Frameworks: ${result.profile.frameworks.join(", ") || "not detected"}`);
+  lines.push(`  Entrypoints:${result.profile.entrypoints?.length ? ` ${result.profile.entrypoints.slice(0, 5).join(", ")}` : " not detected"}`);
   lines.push(`  Commands:   ${result.profile.commands.length ? result.profile.commands.map((command) => command.name).join(", ") : "not detected"}`);
+  lines.push(`  Strategy:   ${result.profile.scanStrategy?.mode ?? "standard"}`);
   lines.push("");
   lines.push(pc.bold("Top findings"));
   lines.push(...renderFindings(result.findings.slice(0, 8)));

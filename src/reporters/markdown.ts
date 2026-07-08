@@ -25,8 +25,10 @@ export function renderMarkdownReport(result: ScanResult): string {
 
 - Languages: ${formatObject(profile.languages)}
 - Frameworks: ${profile.frameworks.join(", ") || "not detected"}
+- Entrypoints: ${profile.entrypoints?.join(", ") || "not detected"}
 - Package manager: ${profile.packageManager ?? "not detected"}
 - CI: ${profile.ciProviders.join(", ") || "not detected"}
+- Scan strategy: ${profile.scanStrategy?.mode ?? "standard"}
 
 ## Commands
 

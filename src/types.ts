@@ -22,11 +22,20 @@ export interface RepoProfile {
   languages: Record<string, number>;
   frameworks: string[];
   commands: DetectedCommand[];
+  entrypoints?: string[];
   importantFiles: string[];
   sourceDirs: string[];
   testDirs: string[];
   ciProviders: string[];
   packageScripts: Record<string, string>;
+  scanStrategy?: {
+    mode: "tiered-fingerprint";
+    sampledFiles: number;
+    maxSampledFiles: number;
+    manifestFiles: string[];
+    entrypointFiles: string[];
+    notes: string[];
+  };
 }
 
 export interface McpServer {

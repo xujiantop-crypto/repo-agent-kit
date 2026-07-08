@@ -37,6 +37,8 @@ AI coding agents are becoming part of normal development, but most repositories 
 ## Features
 
 - Repository profiling for TypeScript, JavaScript, Python, Java, Go, Rust, and more.
+- Tiered repository fingerprinting that checks high-signal manifests and entrypoints before broad language sampling.
+- Static HTML site detection for small frontend projects without `package.json`.
 - Framework and package manager detection.
 - Test/build/lint command discovery.
 - `AGENTS.md` generation.
@@ -109,10 +111,25 @@ Smoke bench checks whether a coding agent can discover basic instructions, valid
 ### Repository Readiness
 
 - Language and framework signals.
+- Entrypoints such as `index.html`, `src/main.ts`, `main.go`, Spring Boot application classes, and runtime config files.
 - Package manager and scripts.
+- Static frontend files such as HTML, CSS, browser JavaScript, nginx config, and cron helpers.
 - CI provider.
 - Existing agent instruction files.
 - Source and test directories.
+
+## How Profiling Works
+
+The profiler is designed to build useful agent context without reading an entire repository up front.
+
+It uses a tiered fingerprint strategy:
+
+1. Check high-signal manifests: `package.json`, `pom.xml`, `pyproject.toml`, `go.mod`, `Cargo.toml`, CI workflows, agent instruction files, and deployment files.
+2. Check likely entrypoints: static `index.html`, frontend app entry files, Go `main.go`, Rust `src/main.rs` / `src/lib.rs`, Spring Boot application classes, and runtime config files.
+3. Sample language files with a cap so large repositories stay responsive.
+4. Read only a small number of candidate files when content confirmation matters, such as confirming a Java `*Application.java` is really a runnable application entrypoint.
+
+This keeps scans fast while giving coding agents the facts they need first: what kind of project this is, how to validate changes, where to start reading, and which files or tools deserve caution.
 
 ### MCP Risk
 
@@ -183,6 +200,7 @@ The goal is to make a repo:
 ## Roadmap
 
 - Language-specific analyzers for Java, Python, Go, Rust, and monorepos.
+- Better framework-specific entrypoint ranking for Spring, Django/FastAPI, Cargo workspaces, and multi-app frontends.
 - SARIF output for GitHub code scanning.
 - MCP allowlist and denylist policy validation.
 - Live MCP metadata inspection behind an explicit `--inspect-live` flag.

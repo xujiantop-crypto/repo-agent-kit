@@ -37,6 +37,8 @@ The strongest route to high stars is not a generic health check. It is the combi
 
 - The architecture is modular: commands, scanners, generators, reporters, and scoring are separated.
 - The default scan is safe: MCP servers are not started.
+- Repository profiling now uses a tiered fingerprint strategy: high-signal manifests and entrypoints first, capped language sampling second.
+- Static HTML projects without `package.json` are recognized as first-class frontend projects.
 - The CLI has useful commands from day one: `scan`, `init`, `mcp`, and `bench`.
 - The generated artifacts are practical and commit-friendly.
 - Tests cover detection, MCP risk scoring, generation, and smoke bench behavior.
@@ -46,9 +48,9 @@ The strongest route to high stars is not a generic health check. It is the combi
 
 - Static MCP risk detection can produce false positives because it infers capabilities from names, commands, args, and env keys.
 - Generated `AGENTS.md` content is useful but still generic until language-specific analyzers become deeper.
-- The GitHub Action currently runs `npx repo-agent-kit`, which will work after the package is published; before publish, users need a local action or pinned package.
+- The GitHub Action currently runs `npx repo-agent-kit`; package availability is solved, but releases still need versioned publishing discipline.
 - Security scanning is intentionally shallow; it should not be marketed as a full security scanner.
-- The name must be checked before publishing to npm and GitHub.
+- Language counts are sampled for responsiveness, so reports should describe them as fast repository signals rather than exhaustive code metrics.
 
 ### Recommended Next Features
 
@@ -56,7 +58,7 @@ The strongest route to high stars is not a generic health check. It is the combi
 2. HTML report for screenshots and sharing.
 3. Badge generation for Agent Ready Score and MCP Risk Score.
 4. Explicit `--inspect-live` mode for MCP `tools/list`, behind a warning prompt.
-5. Language-specific modules:
+5. Deeper language-specific modules:
    - Java/Maven/Gradle,
    - Python/pytest/uv,
    - Go modules,

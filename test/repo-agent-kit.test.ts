@@ -57,6 +57,26 @@ describe("repo profiler", () => {
     expect(profile.commands.map((command) => command.name)).toEqual(expect.arrayContaining(["test", "build", "lint"]));
     expect(profile.ciProviders).toContain("GitHub Actions");
   });
+
+  it("detects static HTML sites without package manifests", async () => {
+    await write("README.md", "# Tetris\n");
+    await write("index.html", "<!doctype html><script src=\"tetris.js\"></script><link rel=\"stylesheet\" href=\"styles.css\">\n");
+    await write("styles.css", "body { margin: 0; }\n");
+    await write("tetris.js", "console.log('play');\n");
+
+    const profile = await profileRepository(tempDir);
+
+    expect(profile.languages).toMatchObject({
+      HTML: 1,
+      CSS: 1,
+      JavaScript: 1
+    });
+    expect(profile.frameworks).toContain("Static HTML site");
+    expect(profile.entrypoints).toContain("index.html");
+    expect(profile.importantFiles).toEqual(expect.arrayContaining(["README.md", "index.html", "styles.css", "tetris.js"]));
+    expect(profile.scanStrategy?.mode).toBe("tiered-fingerprint");
+    expect(profile.scanStrategy?.notes.join("\n")).toContain("static HTML site");
+  });
 });
 
 describe("mcp inspector", () => {

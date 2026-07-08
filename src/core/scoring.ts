@@ -10,8 +10,9 @@ export function calculateScore(profile: RepoProfile, findings: Finding[]): {
   const hasCopilot = profile.importantFiles.includes(".github/copilot-instructions.md");
   const hasTests = profile.commands.some((command) => command.name === "test");
   const hasBuild = profile.commands.some((command) => command.name === "build");
+  const hasEntrypoints = Boolean(profile.entrypoints?.length);
 
-  const context = clamp((hasAgents ? 35 : 0) + (hasCursor ? 20 : 0) + (hasCopilot ? 15 : 0) + (profile.sourceDirs.length ? 15 : 0) + (profile.frameworks.length ? 15 : 0));
+  const context = clamp((hasAgents ? 35 : 0) + (hasCursor ? 20 : 0) + (hasCopilot ? 15 : 0) + (profile.sourceDirs.length ? 15 : 0) + (profile.frameworks.length ? 15 : 0) + (hasEntrypoints ? 15 : 0));
   const commands = clamp((hasTests ? 45 : 0) + (hasBuild ? 30 : 0) + (profile.commands.length >= 3 ? 25 : 0));
   const security = clamp(100 - severityPenalty(findings.filter((finding) => !finding.id.startsWith("mcp-"))));
   const mcpSafety = clamp(100 - severityPenalty(findings.filter((finding) => finding.id.startsWith("mcp-"))));
